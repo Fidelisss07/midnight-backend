@@ -1,139 +1,93 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // --- 1. CONEXÃO MONGODB ---
-const MONGO_URI = "mongodb+srv://Fidelis:Gulipe116@midnightcircuit.5srlwec.mongodb.net/?retryWrites=true&w=majority&appName=midnightcircuit";
+const MONGO_URI = "mongodb+srv://midnight123:midnight123@cluster1.bpoznnx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1";
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log("✅ Conectado ao MongoDB!"))
+    .then(() => console.log("✅ Conectado ao MongoDB! JSONs já não são precisos."))
     .catch(err => console.error("❌ Erro Mongo:", err));
 
-// --- 2. CONFIGURAÇÃO UPLOAD (MULTER) ---
-// Isto corrige o teu erro "upload is not defined"
-const fs = require('fs');
+// --- 2. CONFIGURAÇÃO UPLOAD ---
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'uploads/'),
     filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
-const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB
+const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
 
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
-// Serve o site (HTML/CSS)
 app.use(express.static(__dirname));
 
-// --- 3. MODELOS (SCHEMAS) DO BANCO DE DADOS ---
-// Aqui definimos as regras dos dados
-
-const UserSchema = new mongoose.Schema({
-    nome: String,
-    email: { type: String, unique: true },
-    senha: String,
-    avatar: String,
-    capa: String,
-    bio: String,
-    xp: { type: Number, default: 0 },
-    nivel: { type: Number, default: 1 },
-    seguindo: [String],   // Lista de emails
-    seguidores: [String]  // Lista de emails
+// --- 3. SCHEMAS (Estrutura do Banco) ---
+const userSchema = new mongoose.Schema({
+    nome: String, email: {type: String, unique: true}, senha: String,
+    avatar: String, capa: String, bio: String, xp: {type: Number, default: 0},
+    nivel: {type: Number, default: 1}, seguindo: [String], seguidores: [String]
 });
-const User = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', userSchema);
 
-const PostSchema = new mongoose.Schema({
-    emailAutor: String,
-    nome: String,
-    avatar: String,
-    conteudo: String,
-    midiaUrl: String,
-    tipo: String, // 'imagem' ou 'video'
-    likes: { type: Number, default: 0 },
-    comentarios: [{ autor: String, avatar: String, texto: String, data: { type: Date, default: Date.now } }],
-    timestamp: { type: Date, default: Date.now }
+const postSchema = new mongoose.Schema({
+    emailAutor: String, nome: String, avatar: String, conteudo: String, midiaUrl: String,
+    tipo: String, likes: {type: Number, default: 0}, comentarios: Array,
+    timestamp: {type: Date, default: Date.now}
 });
-const Post = mongoose.model('Post', PostSchema);
+const Post = mongoose.model('Post', postSchema);
 
-const CarroSchema = new mongoose.Schema({
-    dono: String, // Nome do dono
-    emailDono: String, // Email para segurança (novo)
-    marca: String,
-    modelo: String,
-    apelido: String,
-    imagemUrl: String,
-    specs: Object, // { hp: '...', torque: '...' }
-    mods: [String],
-    timestamp: { type: Date, default: Date.now }
+const carroSchema = new mongoose.Schema({
+    dono: String, emailDono: String, marca: String, modelo: String, apelido: String,
+    imagemUrl: String, descricao: String, specs: Object, mods: [String]
 });
-const Carro = mongoose.model('Carro', CarroSchema);
+const Carro = mongoose.model('Carro', carroSchema);
 
-const SprintSchema = new mongoose.Schema({
-    autor: String,
-    emailAutor: String,
-    avatar: String,
-    descricao: String,
-    videoUrl: String,
-    likes: { type: Number, default: 0 },
-    comentarios: [{ autor: String, avatar: String, texto: String }],
-    timestamp: { type: Date, default: Date.now }
+const sprintSchema = new mongoose.Schema({
+    autor: String, emailAutor: String, avatar: String, descricao: String, videoUrl: String,
+    likes: {type: Number, default: 0}, comentarios: Array, timestamp: {type: Date, default: Date.now}
 });
-const Sprint = mongoose.model('Sprint', SprintSchema);
+const Sprint = mongoose.model('Sprint', sprintSchema);
 
-const NotificacaoSchema = new mongoose.Schema({
-    tipo: String, // 'like', 'follow', 'comentario'
-    de: String, // Nome
-    avatar: String,
-    para: String, // Email destino
-    texto: String,
-    imgPreview: String,
-    lida: { type: Boolean, default: false },
-    timestamp: { type: Date, default: Date.now }
+const comunidadeSchema = new mongoose.Schema({
+    nome: String, descricao: String, dono: String, imagem: String,
+    membros: [String], admins: [String], online: {type: Number, default: 1}
 });
-const Notificacao = mongoose.model('Notificacao', NotificacaoSchema);
+const Comunidade = mongoose.model('Comunidade', comunidadeSchema);
 
-const ChatSchema = new mongoose.Schema({
-    de: String, // Email
-    para: String, // Email
-    texto: String,
-    timestamp: { type: Date, default: Date.now }
+const forumSchema = new mongoose.Schema({
+    comunidadeId: String, titulo: String, conteudo: String, autor: String, emailAutor: String,
+    avatar: String, imagemUrl: String, likes: {type: Number, default: 0}, timestamp: {type: Date, default: Date.now}
 });
-const Chat = mongoose.model('Chat', ChatSchema);
+const Forum = mongoose.model('Forum', forumSchema);
 
-const ComunidadeSchema = new mongoose.Schema({
-    nome: String,
-    descricao: String,
-    dono: String, // Email
-    imagem: String,
-    membros: [String], // Lista emails
-    admins: [String],  // Lista emails
-    timestamp: { type: Date, default: Date.now }
+const notifSchema = new mongoose.Schema({
+    tipo: String, de: String, avatar: String, para: String, texto: String, imgPreview: String,
+    lida: {type: Boolean, default: false}, timestamp: {type: Date, default: Date.now}
 });
-const Comunidade = mongoose.model('Comunidade', ComunidadeSchema);
+const Notificacao = mongoose.model('Notificacao', notifSchema);
 
-const ForumSchema = new mongoose.Schema({
-    comunidadeId: String,
-    titulo: String,
-    conteudo: String,
-    autor: String,
-    emailAutor: String,
-    avatar: String,
-    likes: { type: Number, default: 0 },
-    timestamp: { type: Date, default: Date.now }
+const chatSchema = new mongoose.Schema({
+    de: String, para: String, texto: String, timestamp: {type: Date, default: Date.now}
 });
-const Forum = mongoose.model('Forum', ForumSchema);
+const Chat = mongoose.model('Chat', chatSchema);
 
+const storySchema = new mongoose.Schema({
+    emailAutor: String, nome: String, avatar: String, midiaUrl: String, tipo: String,
+    timestamp: {type: Number, default: Date.now}
+});
+const Story = mongoose.model('Story', storySchema);
 
 // --- HELPERS ---
 async function ganharXP(email, qtd) {
-    if(!email) return;
+    if (!email) return;
     const user = await User.findOne({ email });
     if (user) {
         user.xp = (user.xp || 0) + qtd;
@@ -142,276 +96,137 @@ async function ganharXP(email, qtd) {
         await user.save();
     }
 }
-
 async function notificar(tipo, deObj, paraEmail, texto, img = null) {
     if (deObj.email === paraEmail) return;
-    await Notificacao.create({
-        tipo,
-        de: deObj.nome,
-        avatar: deObj.avatar,
-        para: paraEmail,
-        texto,
-        imgPreview: img
-    });
+    await Notificacao.create({ tipo, de: deObj.nome, avatar: deObj.avatar, para: paraEmail, texto, imgPreview: img });
 }
 
+// ================= ROTAS (MONGO PURO) =================
 
-// ================= ROTAS (AGORA COM MONGODB) =================
-
-// 1. AUTENTICAÇÃO
+// Auth
 app.post('/registro', async (req, res) => {
     try {
-        const existe = await User.findOne({ email: req.body.email });
-        if (existe) return res.status(400).send('Email já existe');
-
-        const senhaHash = await bcrypt.hash(req.body.senha, 10);
-        const novoUser = await User.create({
-            ...req.body,
-            senha: senhaHash,
-            avatar: `https://ui-avatars.com/api/?name=${req.body.nome}&background=ef4444&color=fff`,
-            capa: "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=1000",
-            bio: "Novo piloto",
-            xp: 0, nivel: 1
-        });
-        res.status(201).json(novoUser);
-    } catch (e) { res.status(500).send(e.message); }
+        if (await User.findOne({ email: req.body.email })) return res.status(400).send('Email em uso');
+        const hash = await bcrypt.hash(req.body.senha, 10);
+        const novo = await User.create({ ...req.body, senha: hash, avatar: `https://ui-avatars.com/api/?name=${req.body.nome}&background=ef4444&color=fff`, capa: "https://via.placeholder.com/1000x300", bio: "Novo piloto" });
+        res.status(201).json(novo);
+    } catch (e) { res.status(500).send("Erro"); }
 });
-
 app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ email: req.body.email });
-        if (!user) return res.status(401).send('Utilizador não encontrado');
-        
-        const valida = await bcrypt.compare(req.body.senha, user.senha);
-        if (!valida) return res.status(401).send('Senha incorreta');
-        
+        if (!user || !(await bcrypt.compare(req.body.senha, user.senha))) return res.status(401).send('Erro login');
         res.json(user);
-    } catch (e) { res.status(500).send(e.message); }
+    } catch (e) { res.status(500).send("Erro"); }
 });
 
-app.get('/usuarios', async (req, res) => {
-    const users = await User.find({}, 'nome email avatar nivel seguindo seguidores'); // Pega só dados públicos
-    res.json(users);
-});
-
-// 2. PERFIL
-app.get('/perfil/dados', async (req, res) => {
-    const user = await User.findOne({ email: req.query.email });
-    user ? res.json(user) : res.status(404).json({});
-});
-
-app.post('/perfil/atualizar', upload.fields([{name:'avatar'},{name:'capa'}]), async (req, res) => {
-    try {
-        const updateData = { nome: req.body.nome, bio: req.body.bio };
-        if(req.files['avatar']) updateData.avatar = `/uploads/${req.files['avatar'][0].filename}`;
-        if(req.files['capa']) updateData.capa = `/uploads/${req.files['capa'][0].filename}`;
-        
-        const user = await User.findOneAndUpdate({ email: req.body.emailOriginal }, updateData, { new: true });
-        res.json(user);
-    } catch(e) { res.status(500).send("Erro ao atualizar"); }
-});
-
-app.post('/seguir', async (req, res) => {
-    const { eu, ele } = req.body;
-    const userEu = await User.findOne({ email: eu });
-    const userEle = await User.findOne({ email: ele });
-    
-    if(userEu && userEle) {
-        if(userEu.seguindo.includes(ele)) {
-            // Deixar de seguir
-            userEu.seguindo = userEu.seguindo.filter(e => e !== ele);
-            userEle.seguidores = userEle.seguidores.filter(e => e !== eu);
-            await userEu.save(); await userEle.save();
-            res.json({ aSeguir: false });
-        } else {
-            // Seguir
-            userEu.seguindo.push(ele);
-            userEle.seguidores.push(eu);
-            await userEu.save(); await userEle.save();
-            notificar('follow', { nome: userEu.nome, email: eu, avatar: userEu.avatar }, ele, 'começou a seguir-te.');
-            res.json({ aSeguir: true });
-        }
-    } else res.status(404).send('Erro');
-});
-
-// 3. FEED & POSTS
-app.get('/posts', async (req, res) => {
-    const posts = await Post.find().sort({ timestamp: -1 }); // Mais recentes primeiro
-    res.json(posts);
-});
-
+// Feed
+app.get('/posts', async (req, res) => res.json(await Post.find().sort({ timestamp: -1 }).limit(50)));
 app.post('/posts', upload.single('midia'), async (req, res) => {
     const url = req.file ? `/uploads/${req.file.filename}` : null;
     const tipo = (req.file && req.file.mimetype.startsWith('video')) ? 'video' : 'imagem';
-    
     await Post.create({ ...req.body, midiaUrl: url, tipo });
-    ganharXP(req.body.emailAutor, 50);
-    res.status(201).send('Ok');
+    ganharXP(req.body.emailAutor, 50); res.status(201).send('Ok');
 });
-
 app.post('/posts/like/:id', async (req, res) => {
-    // No Mongo o ID é _id, mas no frontend estamos a mandar o ID do post antigo.
-    // Como mudamos para mongo, vamos ter de adaptar. 
-    // Para facilitar, vamos procurar por _id ou id antigo se houver migração.
-    // Nota: O frontend manda o ID. O Mongo usa _id.
     try {
-        const post = await Post.findById(req.params.id) || await Post.findOne({ id: req.params.id });
-        if (post) {
-            post.likes++;
-            await post.save();
-            if(post.emailAutor) notificar('like', req.body, post.emailAutor, 'curtiu.', post.midiaUrl);
-            res.send('Ok');
-        } else res.status(404).send('Post não encontrado');
-    } catch(e) { res.status(500).send('Erro ID'); }
+        // Tenta buscar pelo ID (mesmo que seja string antiga ou ObjectId novo)
+        let p;
+        if (mongoose.isValidObjectId(req.params.id)) p = await Post.findById(req.params.id);
+        // Se não achou ou ID inválido, tenta buscar num campo 'id' personalizado se tivesses (aqui assumimos migração limpa)
+        
+        if (p) { p.likes++; await p.save(); if(p.emailAutor) notificar('like', req.body, p.emailAutor, 'curtiu.', p.midiaUrl); res.send('Ok'); }
+        else res.status(404).send('Post não encontrado');
+    } catch (e) { res.status(500).send('Erro'); }
 });
-
 app.post('/posts/comentar/:id', async (req, res) => {
     try {
-        const post = await Post.findById(req.params.id); // Tenta pelo ID do Mongo
-        if (post) {
-            post.comentarios.push(req.body);
-            await post.save();
-            if(post.emailAutor) notificar('comentario', req.body, post.emailAutor, 'comentou.', post.midiaUrl);
-            res.json(post.comentarios);
-        } else res.status(404).send('Erro');
-    } catch(e) { res.status(500).send(e.message); }
-});
-
-// 4. GARAGEM
-app.get('/carros', async (req, res) => {
-    const carros = await Carro.find();
-    res.json(carros);
-});
-app.post('/carros', upload.single('imagem'), async (req, res) => {
-    const url = req.file ? `/uploads/${req.file.filename}` : 'https://via.placeholder.com/600';
-    // Tenta encontrar dono pelo nome, mas idealmente devia ser pelo email.
-    // Vamos manter pelo nome para compatibilidade com o frontend atual.
-    const user = await User.findOne({ nome: req.body.dono });
-    
-    await Carro.create({
-        ...req.body,
-        emailDono: user ? user.email : null,
-        imagemUrl: url,
-        mods: req.body.mods ? req.body.mods.split(',') : [],
-        specs: {
-            hp: req.body.hp, torque: req.body.torque, zero_cem: req.body.zero_cem,
-            top_speed: req.body.top_speed, cor: req.body.cor, ano: req.body.ano,
-            motor: req.body.motor, cambio: req.body.cambio, tracao: req.body.tracao, peso: req.body.peso
-        }
-    });
-    if(user) ganharXP(user.email, 100);
-    res.status(201).send('Ok');
-});
-app.delete('/carros/:id', async (req, res) => {
-    try {
-        await Carro.findByIdAndDelete(req.params.id);
-        res.send('Ok');
+        if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).send('ID invalido');
+        const p = await Post.findById(req.params.id);
+        if (p) { p.comentarios.push(req.body); await p.save(); if(p.emailAutor) notificar('comentario', req.body, p.emailAutor, 'comentou.', p.midiaUrl); res.json(p.comentarios); }
     } catch(e) { res.status(500).send('Erro'); }
 });
+app.delete('/posts/:id', async (req, res) => { if(mongoose.isValidObjectId(req.params.id)) await Post.findByIdAndDelete(req.params.id); res.send('Ok'); });
 
-// 5. SPRINTS
-app.get('/sprints', async (req, res) => {
-    const sprints = await Sprint.find().sort({ timestamp: -1 });
-    res.json(sprints);
+// Stories
+app.get('/stories', async (req, res) => {
+    const ontem = Date.now() - 86400000;
+    res.json(await Story.find({ timestamp: { $gt: ontem } }));
 });
+app.post('/stories', upload.single('midia'), async (req, res) => {
+    if(!req.file) return res.status(400).send('X');
+    const v = req.file.mimetype.startsWith('video');
+    await Story.create({ ...req.body, midiaUrl: `/uploads/${req.file.filename}`, tipo: v?'video':'imagem', timestamp: Date.now() });
+    res.status(201).send('Ok');
+});
+
+// Carros
+app.get('/carros', async (req, res) => res.json(await Carro.find()));
+app.post('/carros', upload.single('imagem'), async (req, res) => {
+    const url = req.file ? `/uploads/${req.file.filename}` : 'https://via.placeholder.com/600';
+    await Carro.create({ ...req.body, imagemUrl: url, mods: req.body.mods?req.body.mods.split(','):[] });
+    ganharXP(req.body.emailDono, 100); res.status(201).send('Ok'); // Nota: Frontend deve mandar emailDono agora, ou usamos o nome para achar o user
+});
+app.delete('/carros/:id', async (req, res) => { if(mongoose.isValidObjectId(req.params.id)) await Carro.findByIdAndDelete(req.params.id); res.send('Ok'); });
+
+// Sprints
+app.get('/sprints', async (req, res) => res.json(await Sprint.find().sort({ timestamp: -1 })));
 app.post('/sprints', upload.single('video'), async (req, res) => {
-    if (!req.file) return res.status(400).send('Sem vídeo');
-    await Sprint.create({
-        ...req.body,
-        videoUrl: `/uploads/${req.file.filename}`
-    });
-    ganharXP(req.body.emailAutor, 40);
-    res.status(201).send('Ok');
+    if(!req.file) return res.status(400).send('X');
+    await Sprint.create({ ...req.body, videoUrl: `/uploads/${req.file.filename}` });
+    ganharXP(req.body.emailAutor, 40); res.status(201).send('Ok');
 });
-app.post('/sprints/like/:id', async (req, res) => {
-    try {
-        const s = await Sprint.findById(req.params.id);
-        if(s) { s.likes++; await s.save(); res.send('Ok'); }
-    } catch(e) {}
-});
-app.post('/sprints/comentar/:id', async (req, res) => {
-    try {
-        const s = await Sprint.findById(req.params.id);
-        if(s) { s.comentarios.push(req.body); await s.save(); res.json(s.comentarios); }
-    } catch(e) {}
-});
+app.post('/sprints/like/:id', async (req, res) => { if(mongoose.isValidObjectId(req.params.id)){ const s=await Sprint.findById(req.params.id); if(s){s.likes++; await s.save(); res.send('Ok');}} });
+app.post('/sprints/comentar/:id', async (req, res) => { if(mongoose.isValidObjectId(req.params.id)){ const s=await Sprint.findById(req.params.id); if(s){s.comentarios.push(req.body); await s.save(); res.json(s.comentarios);}} });
 
-// 6. COMUNIDADES
-app.get('/comunidades', async (req, res) => {
-    const coms = await Comunidade.find();
-    res.json(coms);
-});
-app.post('/comunidades', upload.single('imagem'), async (req, res) => {
+// Comunidades
+app.get('/comunidades', async (req, res) => res.json(await Comunidade.find()));
+app.post('/comunidades', upload.single('imagem'), async (req, res) => { 
     const url = req.file ? `/uploads/${req.file.filename}` : 'https://via.placeholder.com/800';
-    const nova = await Comunidade.create({
-        ...req.body,
-        dono: req.body.donoEmail,
-        imagem: url,
-        membros: [req.body.donoEmail]
-    });
-    ganharXP(req.body.donoEmail, 150);
-    res.status(201).send('Ok');
+    await Comunidade.create({ ...req.body, imagem: url, membros: [req.body.donoEmail] });
+    ganharXP(req.body.donoEmail, 150); res.status(201).send('Ok');
 });
 app.post('/comunidades/entrar', async (req, res) => {
-    const { idComunidade, emailUsuario } = req.body;
-    // Procura por ID do Mongo (que é string longa)
-    // Se o frontend mandar o ID do mongo, funciona.
-    // Vou adaptar para buscar pelo _id
-    try {
-        const com = await Comunidade.findById(idComunidade);
-        if(com && !com.membros.includes(emailUsuario)) {
-            com.membros.push(emailUsuario);
-            await com.save();
-            res.send('Ok');
-        }
-    } catch(e) {}
+    const { id, email } = req.body;
+    if(mongoose.isValidObjectId(id)){ const c=await Comunidade.findById(id); if(c&&!c.membros.includes(email)){c.membros.push(email); await c.save(); ganharXP(email, 20); res.send('Ok');} }
 });
-
-// 7. FÓRUM (Topicos)
-app.get('/topicos/:id', async (req, res) => {
-    const topicos = await Forum.find({ comunidadeId: req.params.id });
-    res.json(topicos);
+app.post('/comunidades/sair', async (req, res) => {
+    const { id, email } = req.body;
+    if(mongoose.isValidObjectId(id)){ const c=await Comunidade.findById(id); if(c){c.membros=c.membros.filter(m=>m!==email); await c.save(); res.send('Ok');} }
 });
+app.get('/topicos/:id', async (req, res) => res.json(await Forum.find({ comunidadeId: req.params.id })));
 app.post('/topicos', upload.single('imagem'), async (req, res) => {
     const url = req.file ? `/uploads/${req.file.filename}` : null;
     await Forum.create({ ...req.body, imagemUrl: url });
-    ganharXP(req.body.emailAutor, 30);
-    res.status(201).send('Ok');
+    ganharXP(req.body.emailAutor, 30); res.status(201).send('Ok');
 });
+app.post('/topicos/like/:id', async (req, res) => { if(mongoose.isValidObjectId(req.params.id)){ const t=await Forum.findById(req.params.id); if(t){t.likes++; await t.save(); res.send('Ok');}} });
 
-// 8. GERAIS
-app.get('/notificacoes', async (req, res) => {
-    const notifs = await Notificacao.find({ para: req.query.user }).sort({ timestamp: -1 });
-    res.json(notifs);
-});
-app.post('/notificacoes/ler', async (req, res) => {
-    await Notificacao.updateMany({ para: req.body.user }, { lida: true });
-    res.send('Ok');
-});
-app.get('/mensagens', async (req, res) => {
-    const { eu, ele } = req.query;
-    const msgs = await Chat.find({
-        $or: [
-            { de: eu, para: ele },
-            { de: ele, para: eu }
-        ]
-    }).sort({ timestamp: 1 });
-    res.json(msgs);
-});
-app.post('/mensagens', async (req, res) => {
-    await Chat.create(req.body);
-    res.status(201).send('Ok');
-});
-app.get('/ranking', async (req, res) => {
-    const top = await User.find({}, 'nome avatar nivel xp email').sort({ xp: -1 }).limit(50);
-    res.json(top);
-});
+// Outros
+app.get('/usuarios', async (req, res) => res.json(await User.find({}, 'nome email avatar nivel seguindo seguidores')));
 app.get('/pesquisa', async (req, res) => {
-    const t = req.query.q;
-    const regex = new RegExp(t, 'i'); // Busca case-insensitive
-    const users = await User.find({ nome: regex });
-    const cars = await Carro.find({ $or: [{ modelo: regex }, { apelido: regex }] });
-    res.json({ usuarios: users, carros: cars });
+    const t = new RegExp(req.query.q, 'i');
+    res.json({ usuarios: await User.find({ nome: t }), carros: await Carro.find({ $or: [{ modelo: t }, { apelido: t }] }) });
 });
+app.post('/seguir', async (req, res) => {
+    const { eu, ele } = req.body;
+    const uEu = await User.findOne({ email: eu }); const uEle = await User.findOne({ email: ele });
+    if(uEu && uEle) {
+        if(uEu.seguindo.includes(ele)) {
+            uEu.seguindo = uEu.seguindo.filter(e => e !== ele); uEle.seguidores = uEle.seguidores.filter(e => e !== eu);
+            await uEu.save(); await uEle.save(); res.json({ aSeguir: false });
+        } else {
+            uEu.seguindo.push(ele); uEle.seguidores.push(eu);
+            await uEu.save(); await uEle.save(); notificar('follow', { nome: uEu.nome, email: eu, avatar: uEu.avatar }, ele, 'seguiu-te.');
+            res.json({ aSeguir: true });
+        }
+    }
+});
+app.get('/notificacoes', async (req, res) => res.json(await Notificacao.find({ para: req.query.user }).sort({ timestamp: -1 })));
+app.post('/notificacoes/ler', async (req, res) => { await Notificacao.updateMany({ para: req.body.user }, { lida: true }); res.send('Ok'); });
+app.get('/mensagens', async (req, res) => { const { eu, ele } = req.query; res.json(await Chat.find({ $or: [{de:eu,para:ele}, {de:ele,para:eu}] }).sort({ timestamp: 1 })); });
+app.post('/mensagens', async (req, res) => { await Chat.create(req.body); res.status(201).send('Ok'); });
+app.get('/ranking', async (req, res) => res.json(await User.find({}, 'nome avatar nivel xp email').sort({ xp: -1 }).limit(50)));
+app.get('/news', (req, res) => { try{res.json(JSON.parse(fs.readFileSync('news.json')))}catch{res.json([])} });
 
-app.listen(PORT, () => console.log(`🔥 Server MongoDB V1.0 RODANDO na porta ${PORT}`));
+app.listen(PORT, () => console.log(`🔥 Midnight (Mongo Puro) ONLINE: http://localhost:${PORT}/login.html`));

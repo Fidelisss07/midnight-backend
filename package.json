@@ -9,9 +9,13 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+<<<<<<< HEAD
     "express": "^4.22.1",
     "mongodb": "^7.0.0",
     "mongoose": "^9.0.0",
+=======
+    "express": "^4.18.2",
+>>>>>>> e7d624c2c5df51592ff20b9633bad80975349606
     "multer": "^1.4.5-lts.1"
   },
   "engines": {
